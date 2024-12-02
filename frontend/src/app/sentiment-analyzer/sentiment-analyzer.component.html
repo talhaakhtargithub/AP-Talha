@@ -1,0 +1,12 @@
+<div>
+  <h1>Sentiment Analyzer</h1>
+  <textarea [(ngModel)]="inputText" rows="4" cols="50" placeholder="Enter text here..."></textarea>
+  <br/>
+  <button (click)="analyzeSentiment()">Analyze Sentiment</button>
+
+  <div *ngIf="sentiment && confidence">
+    <h2>Result:</h2>
+    <p><strong>Sentiment:</strong> {{ sentiment }}</p>
+    <p><strong>Confidence:</strong> {{ confidence | number:'1.0-2' }}</p>
+  </div>
+</div>

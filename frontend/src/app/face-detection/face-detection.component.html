@@ -1,0 +1,22 @@
+<div class="face-detection-container">
+  <h1>Face Detection</h1>
+
+  <!-- File input for image upload -->
+  <input type="file" (change)="onFileSelected($event)" accept="image/*">
+
+  <!-- Preview of the uploaded image -->
+  <div *ngIf="imageURL" class="image-preview">
+    <img [src]="imageURL" alt="Uploaded Image" />
+  </div>
+
+  <br><br>
+
+  <!-- Button to trigger face detection -->
+  <button (click)="detectFace()">Detect Face</button>
+
+  <!-- Display the result or error message -->
+  <div *ngIf="message" class="result-message">
+    <h2>Result:</h2>
+    <p>{{ message }}</p>
+  </div>
+</div>
