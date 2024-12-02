@@ -2,23 +2,26 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        S3_BUCKET_NAME = "my-model-bucket"
+        // Hardcoded AWS credentials
+        AWS_ACCESS_KEY_ID     = 'AKIA4DMVQXWXO4YV6WGC'  // AWS access key
+        AWS_SECRET_ACCESS_KEY = '5GbGYHDvCB7OpyFqp4uPsBc7VI+w4BcwoPTpBp5u'  // AWS secret key
+        S3_BUCKET_NAME        = "sentiment-model-bucket-unique"  // Your S3 bucket name
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/your-repo.git'
+                // Clone your GitHub repository
+                git 'https://github.com/talhaakhtargithub/AP-Talha.git'  // Replace with your GitHub repository URL
             }
         }
 
         stage('Set Up AWS Infrastructure with Terraform') {
             steps {
                 script {
-                    sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
+                    // Initialize and apply Terraform configuration
+                    sh 'terraform init -chdir=infrastructure'
+                    sh 'terraform apply -auto-approve -chdir=infrastructure'
                 }
             }
         }
@@ -26,6 +29,7 @@ pipeline {
         stage('Download Model from S3') {
             steps {
                 script {
+                    // Download the model from S3 bucket
                     sh '''
                     aws s3 cp s3://$S3_BUCKET_NAME/model.tar.gz .
                     tar -xzf model.tar.gz
@@ -37,17 +41,17 @@ pipeline {
         stage('Build and Deploy Docker Containers') {
             steps {
                 script {
-                    sh 'docker-compose up --build -d'
+                    // Build and run the containers using Docker Compose
+                    sh 'docker-compose -f docker-compose.yml up --build -d'
                 }
             }
         }
+    }
 
-        stage('Clean Up') {
-            steps {
-                script {
-                    sh 'terraform destroy -auto-approve'
-                }
-            }
+    post {
+        always {
+            echo "Cleaning up resources..."
+            sh 'docker-compose -f docker-compose.yml down'  // Clean up after running the pipeline
         }
     }
 }
