@@ -2,16 +2,17 @@ pipeline {
     agent any
     
     environment {
-        AWS_CREDENTIALS = credentials('aws-credentials-id') // Replace with your Jenkins credentials ID
-        DOCKER_REPO = 'your-docker-repo'
-        BACKEND_IMAGE = 'talhaboss-backend-1'
-        FRONTEND_IMAGE = 'talhaboss-frontend-1'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials-id') // Replace with your Jenkins credentials ID for Docker Hub
+        GITHUB_REPO_URL = 'https://github.com/your-username/your-repository.git' // Replace with your GitHub repository URL
+        DOCKER_REPO = 'your-dockerhub-username' // Replace with your Docker Hub username
+        BACKEND_IMAGE = 'backend-image'
+        FRONTEND_IMAGE = 'frontend-image'
     }
     
     stages {
-        stage('Checkout') {
+        stage('Checkout from GitHub') {
             steps {
-                checkout scm
+                git branch: 'main', url: "${GITHUB_REPO_URL}" // Replace 'main' with your branch if different
             }
         }
 
@@ -31,23 +32,24 @@ pipeline {
             }
         }
 
-        stage('Push Docker Images') {
+        stage('Push Docker Images to Docker Hub') {
             steps {
-                sh 'docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}'
-                sh 'docker push ${DOCKER_REPO}/${BACKEND_IMAGE}:latest'
-                sh 'docker push ${DOCKER_REPO}/${FRONTEND_IMAGE}:latest'
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-credentials-id') {
+                        sh 'docker push ${DOCKER_REPO}/${BACKEND_IMAGE}:latest'
+                        sh 'docker push ${DOCKER_REPO}/${FRONTEND_IMAGE}:latest'
+                    }
+                }
             }
         }
-
-        stage('Apply Terraform') {
+        
+        stage('Deploy Infrastructure with Terraform') {
             steps {
                 dir('infrastructure') {
-                    withAWS(credentials: 'aws-credentials-id', region: 'your-region') {
-                        sh '''
-                            terraform init
-                            terraform apply -auto-approve
-                        '''
-                    }
+                    sh '''
+                        terraform init
+                        terraform apply -auto-approve
+                    '''
                 }
             }
         }
