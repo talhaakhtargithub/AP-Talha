@@ -1,57 +1,55 @@
 pipeline {
     agent any
-
+    
     environment {
-        // Hardcoded AWS credentials
-        AWS_ACCESS_KEY_ID     = 'AKIA4DMVQXWXO4YV6WGC'  // AWS access key
-        AWS_SECRET_ACCESS_KEY = '5GbGYHDvCB7OpyFqp4uPsBc7VI+w4BcwoPTpBp5u'  // AWS secret key
-        S3_BUCKET_NAME        = "sentiment-model-bucket-unique"  // Your S3 bucket name
+        AWS_CREDENTIALS = credentials('aws-credentials-id') // Replace with your Jenkins credentials ID
+        DOCKER_REPO = 'your-docker-repo'
+        BACKEND_IMAGE = 'talhaboss-backend-1'
+        FRONTEND_IMAGE = 'talhaboss-frontend-1'
     }
-
+    
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                // Clone your GitHub repository
-                git 'https://github.com/talhaakhtargithub/AP-Talha.git'  // Replace with your GitHub repository URL
+                checkout scm
             }
         }
 
-        stage('Set Up AWS Infrastructure with Terraform') {
+        stage('Build Backend Docker Image') {
             steps {
-                script {
-                    // Initialize and apply Terraform configuration
-                    sh 'terraform init -chdir=infrastructure'
-                    sh 'terraform apply -auto-approve -chdir=infrastructure'
+                dir('backend') {
+                    sh 'docker build -t ${DOCKER_REPO}/${BACKEND_IMAGE}:latest .'
+                }
+            }
+        }
+        
+        stage('Build Frontend Docker Image') {
+            steps {
+                dir('frontend') {
+                    sh 'docker build -t ${DOCKER_REPO}/${FRONTEND_IMAGE}:latest .'
                 }
             }
         }
 
-        stage('Download Model from S3') {
+        stage('Push Docker Images') {
             steps {
-                script {
-                    // Download the model from S3 bucket
-                    sh '''
-                    aws s3 cp s3://$S3_BUCKET_NAME/model.tar.gz .
-                    tar -xzf model.tar.gz
-                    '''
-                }
+                sh 'docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}'
+                sh 'docker push ${DOCKER_REPO}/${BACKEND_IMAGE}:latest'
+                sh 'docker push ${DOCKER_REPO}/${FRONTEND_IMAGE}:latest'
             }
         }
 
-        stage('Build and Deploy Docker Containers') {
+        stage('Apply Terraform') {
             steps {
-                script {
-                    // Build and run the containers using Docker Compose
-                    sh 'docker-compose -f docker-compose.yml up --build -d'
+                dir('infrastructure') {
+                    withAWS(credentials: 'aws-credentials-id', region: 'your-region') {
+                        sh '''
+                            terraform init
+                            terraform apply -auto-approve
+                        '''
+                    }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo "Cleaning up resources..."
-            sh 'docker-compose -f docker-compose.yml down'  // Clean up after running the pipeline
         }
     }
 }
